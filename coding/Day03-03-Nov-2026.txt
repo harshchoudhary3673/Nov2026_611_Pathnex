@@ -1,0 +1,56 @@
+# ------- ansible , terraform , kubernetes ------
+# ansible - install apache and start service
+- name: install and start apache
+  hosts: all
+  become: yes
+  tasks: 
+    - name: install apache
+      yum: 
+        name: httpd
+        state: present
+
+    - name: start apache
+      service: 
+        name: httpd
+        state: started
+        enabled: yes
+
+
+# terraform - EC2 instance
+
+provider "aws" {
+      region = "us-east-1"
+        }
+
+resource "aws_instance" "pathnex" {
+    ami                           = "ami-0abcd1234abcd1234"
+    instance_type                 = "t3.medium"
+    tags  = {
+      Name = "pathnex-t3"
+        }
+}      
+
+
+# kubernetes - create a replicaSet with 3 replica
+
+apiVersion: apps/v1
+kind: replicaSet
+metadata:
+  name: pathnex-replicaSet
+
+spec: 
+  replicas: 3
+  selector: 
+    matchlabels: 
+      app: pathnex-app
+  template:
+    metadata:
+      labels: 
+        app: pathnex-app
+    spec: 
+      containers:
+        - name: app
+          image: nginx
+          ports:
+            - containerport: 80
+            
