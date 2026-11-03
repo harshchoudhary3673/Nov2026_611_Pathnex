@@ -1,0 +1,72 @@
+# ansible - install and enble nginx
+- name: instal and enable nginx on pathnex
+  host: all
+  become: yes
+
+  tasks:
+    - name: install nginx
+      yum:
+        name: nginx
+        state: present	
+
+
+    - name: enable nginx
+   	service:
+  	  name: nginx
+	  state: started
+	  enabled: yes
+
+
+
+# terraform with ec2 insatnce
+
+provider "aws" {
+	region = "eu-north-1"
+	}
+
+resource "aws_instance" "pathnexEC2" {
+	ami 			=	"ami-0abcd1234abcd1234"
+	instance_type		=	"r5.2xlarge"
+	
+	tags = {
+	  Name		= "pathnex_server"
+	  Environment	= "training"
+	  Owner		= "pathnexStudent"
+	}
+	}
+
+
+
+
+
+
+# kubernetes - Deployment with 2 replica
+
+apiVersion: app/v1
+kind: Deployment
+metadata:
+  name: pathnex-deployment
+spec:
+  replicas: 2
+  selector:
+    matchlabels:
+      app: pathnex-app
+  template:
+    metadata:
+      labels: 
+	app: pathnex-app
+    spec:
+      containers:
+	- name: app
+	  image: nginx
+   	  ports:
+	    - containerports: 80
+
+
+
+
+# shell script - disk usage
+df -h
+
+
+ 	
