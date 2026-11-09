@@ -1,0 +1,69 @@
+# automating cloud infrastructure with terraform and ansible
+# ansible - setup nginx with custom config
+
+- name: setup nginx with custom config
+  hosts: all
+  become: yes
+  tasks: 
+    - name: install nginx
+      yum:
+        name: nginx
+        state: present
+    - name: copy custom nginx.conf
+      copy:
+        src: nginx.conf
+        dest: /etc/nginx/nginx.conf
+    - name: start nginx service
+      service:
+        name: nginx
+        state: started
+        enabled: yes
+
+# terraform - provision EC2 with IAM role
+
+resource "aws_iam_role" "ec2_role" {
+    name                  =  "pathnex_ec2_role"
+    assume_role_policy    =   jsonencode ({
+      version  = "2012-10-17"
+      statement   =   [
+        {
+          Action =  "sts:AssumeRole"
+          effect =  "allow"
+          principal = {
+            service =  "ec2.amazonaws.com"
+            }
+          },
+        ]
+      })
+    }
+resource "aws_instance" "pathnex_ec2" {
+  ami                       =    "ami-0abcd1234abcd1234"
+  instance_type             =    "t2.medium"
+  iam_instance_profile      =    aws_iam_role.ec2_role.name
+  tags    =  {
+      name  =  "pathnex-ec2" 
+      }
+  }
+
+#  kubernetes  -  configMap and secret management
+apiVersion: v1
+kind: configMap
+metadata: 
+  name: pathnex-config
+data:
+  app.properties:
+    key=value
+
+---
+apiVersion: v1
+kind: secret
+metadata: 
+  name: pathnex-secret
+type: opaque
+data:
+  password: cGF0aG5leHBhc3M=
+
+# Shell Script — Archive Logs
+#!/bin/bash
+tar -czf /var/log/archived_logs.tar.gz /var/log/*.log
+
