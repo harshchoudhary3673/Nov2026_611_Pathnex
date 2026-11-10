@@ -1,0 +1,97 @@
+# introduction to docker and CI/CD pipeline
+# ansible - install docker compose
+- name: install docker compose
+  hosts: all
+  become: yes
+  tasks:
+    - name: install dependencies
+      yum:
+        name: "python3-pip"
+        state: present
+    - name: install docker-compose
+      pip:
+        name: docker-compose
+
+# terraform - EC2 with security group with EBS volume
+resource "aws_security_group" "allow_ssh_http" {
+  name                      =       "allow_ssh_http"
+  description               =       "Allow SSH and HTTP access"
+  ingress {
+    from_port       =  22
+    to_port         =  22
+    protocol        =  "tcp"
+    cidr_blocks     =  ["0.0.0.0/0"]
+    }
+    
+    ingress  {
+      from_port     = 80
+      to_port       = 80
+      protocol      = "tcp"
+      cidr_blocks     =  ["0.0.0.0/0"]
+    }
+  }
+resource "aws_instance" "pathnex_ec2" {
+    ami                     =   "ami-0abcd1234abcd1234"
+    insatnce_type           =   "t3.medium"
+    security_groups         = [aws_security_group.allow_ssh_http.name]
+    
+    ebs_block_device  {
+        device_name   =   "/dev/sdh"
+        volume_size   =   30
+   }
+}
+
+# kubernetes  -  service with nodeport
+apiversion: v1
+kind: service
+metadata: service
+  name: pathnex-service
+spec:
+  type: Nodeport
+  selector:
+    app: pathnex-app
+  ports:
+    - protocol: tcp
+      port: 80
+      nodeport: 30007
+
+# jenkinsfile - docker build and push
+
+pipeline  {
+    agent any
+    stages{
+        stage('build docker image') {
+            steps {
+                script {
+                    docker.build('pathnex-app')
+                }
+            }
+        }
+        stage ('Push Docker Image') {
+            steps {
+                script {
+                    docker.withRegistry('https://docker.io', 'docker-credentials') {
+                        docker.image('pathnex-app').push('latest')
+                    }
+                }
+            }
+        }
+    }
+}
+
+# GitLab CI/CD - Build & Push Docker Image
+Stages:
+  - build
+  - push
+
+build:
+  stage: Build
+  script:
+    - docker build -t pathnex-app .
+
+push:
+  stage: push
+  script:
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD"
+    - docker push pathnex-app
+
